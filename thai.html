@@ -1,0 +1,399 @@
+<!--  python3 -m http.server 8085 -->
+
+<html>
+
+    <head>
+        <meta charset="UTF-8" />
+        <title>thai-gui-html</title>
+
+        <!--
+            Ayuthaya, Krungthep, Sukhumvit Set, Thonburi, Sathu, Silom
+                [Default = Thonburi]
+            400 = normal weight
+
+            The thai-specimen-highlight.left value must be half of thai-specimen.letter-spacing.
+            Other values in thai-specimen-highlight are based on empirical evidence, and work OK on iPhone
+            (but not so well on Mac).
+        -->
+        <style>
+            .thai-specimen
+            {
+                font-family: Ayuthaya; font-size: 48px; font-weight: 400;
+                letter-spacing: 10px;
+                margin-top: -10; margin-bottom: 0;
+            }
+            .thai-specimen-highlight
+            {
+                position: relative; display: inline;
+            }
+            .thai-specimen-highlight::before
+            {
+                content: "";
+                position: absolute;
+                background-color: lightgray;
+                width: 100%; height: 100%;
+                left: -5px;
+                top: 3px;
+                z-index: -1;
+            }
+            .thai-specimen-related
+            {
+                position: relative; display: inline;
+            }
+            .thai-specimen-related::before
+            {
+                content: "";
+                position: absolute;
+                border: 1px solid lightgray;
+                width: 100%; height: 100%;
+                left: -5px;
+                top: 3px;
+                z-index: -1;
+            }
+        </style>
+
+        <style>
+            .consonant-class-label
+            {
+                font-family: sans-serif; font-size: 12px;
+                letter-spacing: 0px;
+                margin-top: 0; margin-bottom: 0;
+                color:gray;
+            }
+        </style>
+
+        <style>
+            .thai-specimen-border
+            {
+                margin-top: 8;
+                border-top: 1px solid lightgray;
+            }
+        </style>
+
+        <style>
+            .outer-flex { display:flex; flex-direction: column; }
+        </style>
+        <style>
+            .specimen-and-tones-grid
+            {
+                display: grid;
+                grid-template-columns: max-content max-content;
+                align-items: center;
+            }
+        </style>
+        <style>
+            .tone-info
+            {
+                margin-top: 0; margin-bottom: 0;
+                font-family: monospace; font-size: 26px;
+                letter-spacing: 7px;
+            }
+        </style>
+        <style>
+            .tone-info-grid
+            {
+                display: grid;
+                grid-template-columns: repeat(6, max-content); grid-template-rows: repeat(2, max-content);
+                justify-items: center; align-items: center;
+                margin-left: 40px;
+            }
+        </style>
+
+        <script>
+            const SINGLE_LOW_CONSONANT = 0;
+            const PAIRED_LOW_CONSONANT = 1;
+            const MIDDLE_CONSONANT = 2;
+            const HIGH_CONSONANT = 3;
+
+            const THAI_CHAR_INFO = Object.freeze(
+                {
+                    'ก': Object.freeze({ name: "ไก่",    translitChar: "gɔ",  translitName: "gai(l)",         meaning: "chicken",   category: MIDDLE_CONSONANT     }),
+                    'ข': Object.freeze({ name: "ไข่",    translitChar: "kɔ",  translitName: "kai(l)",         meaning: "egg",       category: HIGH_CONSONANT       }),
+                    'ฃ': Object.freeze({ name: "ขวด",   translitChar: "kɔ",  translitName: "kuuat(l)",       meaning: "bottle",    category: HIGH_CONSONANT       }),
+                    'ค': Object.freeze({ name: "ควาย",  translitChar: "kɔ",  translitName: "kwaai(m)",       meaning: "buffalo",   category: SINGLE_LOW_CONSONANT }),
+                    'ฅ': Object.freeze({ name: "คน",    translitChar: "kɔ",  translitName: "kon(m)",         meaning: "person",    category: SINGLE_LOW_CONSONANT }),
+                    'ฆ': Object.freeze({ name: "ระฆัง",  translitChar: "kɔ",  translitName: "ra(h)kang(m)",   meaning: "bell",      category: SINGLE_LOW_CONSONANT }),
+                    'ง': Object.freeze({ name: "งู",     translitChar: "ngɔ", translitName: "nguu(m)",        meaning: "snake",     category: PAIRED_LOW_CONSONANT }),
+                    'จ': Object.freeze({ name: "จาน",   translitChar: "jɔ",  translitName: "jaan(m)",        meaning: "plate",     category: MIDDLE_CONSONANT     }),
+                    'ฉ': Object.freeze({ name: "ฉิ่ง",    translitChar: "chɔ", translitName: "ching(l)",       meaning: "cymbals",   category: HIGH_CONSONANT       }),
+                    'ช': Object.freeze({ name: "ช้าง",   translitChar: "chɔ", translitName: "chaang(h)",      meaning: "elephant",  category: SINGLE_LOW_CONSONANT }),
+                    'ซ': Object.freeze({ name: "โซ่",    translitChar: "sɔ",  translitName: "soo(f)",         meaning: "chain",     category: SINGLE_LOW_CONSONANT }),
+                    'ฌ': Object.freeze({ name: "เฌอ",   translitChar: "chɔ", translitName: "chəə(m)",        meaning: "tree",      category: SINGLE_LOW_CONSONANT }),
+                    'ญ': Object.freeze({ name: "หญิง",   translitChar: "yɔ",  translitName: "ying(r)",        meaning: "woman",     category: PAIRED_LOW_CONSONANT }),
+                    'ฎ': Object.freeze({ name: "ชฎา",   translitChar: "dɔ",  translitName: "cha(h)daa(m)",   meaning: "headdress", category: MIDDLE_CONSONANT     }),
+                    'ฏ': Object.freeze({ name: "ปฏัก",   translitChar: "dtɔ", translitName: "bpa(l)dtak(l)",  meaning: "javelin",   category: MIDDLE_CONSONANT     }),
+                    'ฐ': Object.freeze({ name: "ฐาน",   translitChar: "tɔ",  translitName: "taan(r)",        meaning: "pedestal",  category: HIGH_CONSONANT       }),
+                    'ฑ': Object.freeze({ name: "มณโฑ",  translitChar: "tɔ",  translitName: "mon(m)to(m)",    meaning: "Montho",    category: SINGLE_LOW_CONSONANT }),
+                    'ฒ': Object.freeze({ name: "ผู้เฒ่า",  translitChar: "tɔ",  translitName: "puu(f)taao(f)",  meaning: "elder",     category: SINGLE_LOW_CONSONANT }),
+                    'ณ': Object.freeze({ name: "เณร",   translitChar: "nɔ",  translitName: "nen(m)",         meaning: "samanera",  category: PAIRED_LOW_CONSONANT }),
+                    'ด': Object.freeze({ name: "เด็ก",   translitChar: "dɔ",  translitName: "dek(l)",         meaning: "child",     category: MIDDLE_CONSONANT     }),
+                    'ต': Object.freeze({ name: "เต่า",   translitChar: "dtɔ", translitName: "dtao(l)",        meaning: "turtle",    category: MIDDLE_CONSONANT     }),
+                    'ถ': Object.freeze({ name: "ถุง",    translitChar: "tɔ",  translitName: "tung(r)",        meaning: "sack",      category: HIGH_CONSONANT       }),
+                    'ท': Object.freeze({ name: "ทหาร",  translitChar: "tɔ",  translitName: "ta(h)haan(r)",   meaning: "soldier",   category: SINGLE_LOW_CONSONANT }),
+                    'ธ': Object.freeze({ name: "ธง",    translitChar: "tɔ",  translitName: "tong(m)",        meaning: "flag",      category: SINGLE_LOW_CONSONANT }),
+                    'น': Object.freeze({ name: "หนู",    translitChar: "nɔ",  translitName: "nuu(r)",         meaning: "mouse",     category: PAIRED_LOW_CONSONANT }),
+                    'บ': Object.freeze({ name: "ใบไม้",  translitChar: "bɔ",  translitName: "bai(m)mai(h)",   meaning: "leaf",      category: MIDDLE_CONSONANT     }),
+                    'ป': Object.freeze({ name: "ปลา",   translitChar: "bpɔ", translitName: "bplaa(m)",       meaning: "fish",      category: MIDDLE_CONSONANT     }),
+                    'ผ': Object.freeze({ name: "ผึ้ง",    translitChar: "pɔ",  translitName: "pʉng(f)",        meaning: "bee",       category: HIGH_CONSONANT       }),
+                    'ฝ': Object.freeze({ name: "ฝา",    translitChar: "fɔ",  translitName: "faa(r)",         meaning: "lid",       category: HIGH_CONSONANT       }),
+                    'พ': Object.freeze({ name: "พาน",   translitChar: "pɔ",  translitName: "paan(m)",        meaning: "phan",      category: SINGLE_LOW_CONSONANT }),
+                    'ฟ': Object.freeze({ name: "ฟัน",    translitChar: "fɔ",  translitName: "fan(m)",         meaning: "tooth",     category: SINGLE_LOW_CONSONANT }),
+                    'ภ': Object.freeze({ name: "สำเภา", translitChar: "pɔ",  translitName: "sam(r)pao(m)",   meaning: "junk",      category: SINGLE_LOW_CONSONANT }),
+                    'ม': Object.freeze({ name: "ม้า",    translitChar: "mɔ",  translitName: "maa(h)",         meaning: "horse",     category: PAIRED_LOW_CONSONANT }),
+                    'ย': Object.freeze({ name: "ยักษ์",   translitChar: "yɔ",  translitName: "yak(h)",         meaning: "giant",     category: PAIRED_LOW_CONSONANT }),
+                    'ร': Object.freeze({ name: "เรือ",   translitChar: "rɔ",  translitName: "rʉa(m)",         meaning: "boat",      category: PAIRED_LOW_CONSONANT }),
+                    'ล': Object.freeze({ name: "ลิง",    translitChar: "lɔ",  translitName: "ling(m)",        meaning: "monkey",    category: PAIRED_LOW_CONSONANT }),
+                    'ว': Object.freeze({ name: "แหวน",  translitChar: "wɔ",  translitName: "wεεn(r)",        meaning: "ring",      category: PAIRED_LOW_CONSONANT }),
+                    'ศ': Object.freeze({ name: "ศาลา",  translitChar: "sɔ",  translitName: "saa(r)laa(m)",   meaning: "pavillion", category: HIGH_CONSONANT       }),
+                    'ษ': Object.freeze({ name: "ฤๅษี",   translitChar: "sɔ",  translitName: "rʉʉ(m)sii(r)",   meaning: "hermit",    category: HIGH_CONSONANT       }),
+                    'ส': Object.freeze({ name: "เสือ",   translitChar: "sɔ",  translitName: "sʉʉa(r)",        meaning: "tiger",     category: HIGH_CONSONANT       }),
+                    'ห': Object.freeze({ name: "หีบ",    translitChar: "hɔ",  translitName: "hiip(l)",        meaning: "box",       category: HIGH_CONSONANT       }),
+                    'ฬ': Object.freeze({ name: "จุฬา",   translitChar: "lɔ",  translitName: "ju(l)laa(m)",    meaning: "kite",      category: PAIRED_LOW_CONSONANT }),
+                    'อ': Object.freeze({ name: "อ่าง",   translitChar: "ɔ",   translitName: "aang(l)",        meaning: "basin",     category: MIDDLE_CONSONANT     }),
+                    'ฮ': Object.freeze({ name: "นกฮูก",  translitChar: "hɔ",  translitName: "nok(h) huuk(f)", meaning: "owl",       category: SINGLE_LOW_CONSONANT })
+                });
+
+            /*
+                Preprocess the Thai character info into HTML, as an optimization. Otherwise we'd need to do this work
+                upon each change in selected char.
+             */
+            const THAI_CHAR_INFO_HTML = Object.entries(THAI_CHAR_INFO).reduce((acc, [char, charInfo]) =>
+                {
+                    let thai = `${char} ${charInfo.name}`;
+
+                    let formattedTranslitName = formatTransliteratedText(charInfo.translitName)
+                    let translit = `${charInfo.translitChar} ${formattedTranslitName}&nbsp;&nbsp;${charInfo.meaning}`;
+
+                    acc[char] = { thai: thai, translit: translit };
+
+                    return acc;
+                },
+                {});
+
+            const THAI_CHARS_BY_SOUND = Object.entries(THAI_CHAR_INFO).reduce((acc, [char, charInfo]) =>
+                {
+                    const sound = charInfo.translitChar;
+
+                    let set = acc[sound];
+                    if (set == undefined)
+                    {
+                        set = new Set();
+                        acc[sound] = set;
+                    }
+
+                    set.add(char);
+
+                    return acc;
+                },
+                {});
+
+            /*
+                */
+            function formatTransliteratedText(transliteratedText)
+            {
+                let formattedText = "";
+
+                const STATE_NORMAL = 0;
+                const STATE_SAW_LPAREN = 1;
+                const STATE_SAW_TONE = 2;
+                let state = STATE_NORMAL;
+
+                let originalToneChar = 0;
+                let toneString = "";
+
+                let transliteratedTextLength = transliteratedText.length;
+                let i = 0;
+                while (i <= transliteratedTextLength)
+                {
+                    const ch = (i == transliteratedTextLength) ? 0 : transliteratedText.charAt(i);
+
+                    switch (state)
+                    {
+                    case STATE_NORMAL:
+                        if (ch == '(') state = STATE_SAW_LPAREN;
+                        else if (ch) formattedText += ch;
+                        ++i;
+                        break;
+
+                    case STATE_SAW_LPAREN:
+                        state = STATE_SAW_TONE;
+                        ++i;
+                        originalToneChar = ch;
+
+                        switch (ch)
+                        {
+                        case 'l': toneString = "L"; break;
+                        case 'm': toneString = "M"; break;
+                        case 'h': toneString = "H"; break;
+                        case 'r': toneString = "R"; break;
+                        case 'f': toneString = "F"; break;
+                        default:
+                            // Don't increment i; reprocess as normal char. For example, could be (.
+                            --i;
+                            state = STATE_NORMAL;
+                            break;
+                        }
+
+                        break;
+
+                    case STATE_SAW_TONE:
+                        if (ch == ')')
+                        {
+                            // Without "display: inline-block" the superscript font size seems to be ignored
+                            // on iPhone (works as expected on Mac).
+                            formattedText += `<sup style="font-size: 19px; color: gray; display: inline-block;">${toneString}</sup>`;
+                            ++i;
+                        }
+                        else
+                        {
+                            // Store (x but don't increment i; reprocess as normal char. For example, could be (.
+                            formattedText += originalToneChar;
+                        }
+
+                        state = STATE_NORMAL;
+                        break;
+                    }
+                }
+
+                return formattedText;
+            }
+
+        </script>
+    </head>
+
+    <!--
+        Disable double-tap zoom, which makes the page more responsive. Otherwise, a single tap is delayed waiting
+        to see if the second tap will occur.
+    -->
+    <body style="touch-action: manipulation;">
+        <div class="outer-flex">
+            <div class="specimen-and-tones-grid">
+
+                <!--
+                    25cc is supposedly the placeholder, but it is not needed on iPhone, which renders tone marks
+                    using some similar but smaller character automatically. Adding an explicit placeholder results in
+                    there being two placeholders for each tone mark.
+                 -->
+
+                <div>
+                    <div class="consonant-class-label">
+                        Low (single, paired)
+                    </div>
+                    <div class=thai-specimen style="color: rgb(52, 103, 0);"><span id="low-single-specimens">คฅฆชซฌฑฒทธพฟภฮ</span></div>
+                    <div class=thai-specimen style="color: rgb(0, 103, 103);"><span id="low-paired-specimens">งญณนมยรลวฬ</span></div>
+                </div>
+                <div class="tone-info-grid">
+                    <div class="tone-info">&#x25cf</div>
+                    <div class="tone-info">&#x2010</div>
+                    <div class="tone-info">&#x2014</div>
+                    <div class="tone-info">&#xe48</div>
+                    <div class="tone-info">&#xe49</div>
+                    <div class="tone-info"></div>
+                    <div class="tone-info">M</div>
+                    <div class="tone-info">H</div>
+                    <div class="tone-info">F</div>
+                    <div class="tone-info">F</div>
+                    <div class="tone-info">H</div>
+                    <div class="tone-info"></div>
+                </div>
+
+                <div>
+                    <div class="consonant-class-label thai-specimen-border">
+                        Middle
+                    </div>
+                    <div class=thai-specimen style="color: rgb(103, 0, 0);"><span id="middle-specimens">กจฎฏดตบปอ</span></div>
+                </div>
+                <div class="tone-info-grid">
+                    <div class="tone-info">&#x25cf</div>
+                    <div class="tone-info">&#x2013</div>
+                    <div class="tone-info">&#xe48</div>
+                    <div class="tone-info">&#xe49</div>
+                    <div class="tone-info">&#xe4a</div>
+                    <div class="tone-info">&#xe4b</div>
+                    <div class="tone-info">M</div>
+                    <div class="tone-info">L</div>
+                    <div class="tone-info">L</div>
+                    <div class="tone-info">F</div>
+                    <div class="tone-info">H</div>
+                    <div class="tone-info">R</div>
+                </div>
+
+                <div>
+                    <div class="consonant-class-label thai-specimen-border">
+                        High
+                    </div>
+                    <div class=thai-specimen style="color: rgb(83, 0, 167);"><span id="high-specimens">ขฃฉฐถผฝศษสห</span></div>
+                </div>
+                <div class="tone-info-grid">
+                    <div class="tone-info">&#x25cf</div>
+                    <div class="tone-info">&#x2013</div>
+                    <div class="tone-info">&#xe48</div>
+                    <div class="tone-info">&#xe49</div>
+                    <div class="tone-info"></div>
+                    <div class="tone-info"></div>
+                    <div class="tone-info">R</div>
+                    <div class="tone-info">L</div>
+                    <div class="tone-info">L</div>
+                    <div class="tone-info">F</div>
+                    <div class="tone-info"></div>
+                    <div class="tone-info"></div>
+                </div>
+            </div>
+
+            <!-- flex row 2 -->
+            <div style="margin-top: 8; border-top: 1px solid gray;">
+                <div style="margin-top: 8;">
+                    <span id="selected-char-thai" style="font-family: Ayuthaya; font-size: 35px;"></span>
+                    <span id="selected-char-translit" style="font-size: 35px; margin-left: 20"></span>
+                </div>
+            </div>
+
+            <script>
+                const lowSingleElement = document.getElementById("low-single-specimens");
+                const lowPairedElement = document.getElementById("low-paired-specimens");
+                const middleElement = document.getElementById("middle-specimens");
+                const highElement = document.getElementById("high-specimens");
+
+                lowSingleElement.addEventListener("click", (event) => { onSpecimenClick(event, lowSingleElement); });
+                lowPairedElement.addEventListener("click", (event) => { onSpecimenClick(event, lowPairedElement); });
+                middleElement.addEventListener("click", (event) => { onSpecimenClick(event, middleElement); });
+                highElement.addEventListener("click", (event) => { onSpecimenClick(event, highElement); });
+
+                function onSpecimenClick(event, element)
+                {
+                    const x = event.offsetX;
+                    const text = element.textContent;
+                    const textWidth = element.getBoundingClientRect().width;
+                    const textLength = text.length;
+                    const spacing = parseInt(window.getComputedStyle(element).letterSpacing);
+
+                    const charIndex = Math.floor((x + (spacing / 2)) / textWidth * textLength);
+
+                    // Because we added to x above, the result might be == textLength.
+                    if (charIndex >= textLength) return;
+
+                    const thaiChar = element.textContent.charAt(charIndex);
+                    const soundGroup = THAI_CHARS_BY_SOUND[THAI_CHAR_INFO[thaiChar].translitChar];
+
+                    for (const elem of [lowSingleElement, lowPairedElement, middleElement, highElement])
+                    {
+                        elem.innerHTML = [...elem.textContent].map((char, i) =>
+                            ((elem === element) && (i == charIndex))
+                                ? `<span class="thai-specimen-highlight">${char}</span>`
+                                : (soundGroup.has(char)
+                                    ? `<span class="thai-specimen-related">${char}</span>`
+                                    : char)).join("");
+
+                    }
+
+                    // Info about the char (name, meaning, etc.).
+                    let htm = THAI_CHAR_INFO_HTML[thaiChar];
+                    document.getElementById("selected-char-thai").innerText = htm.thai;
+                    document.getElementById("selected-char-translit").innerHTML = htm.translit;
+                }
+
+            </script>
+        </div>
+
+    </body>
+</html>
