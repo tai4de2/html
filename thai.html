@@ -98,15 +98,32 @@
                 margin-left: 40px;
             }
         </style>
+        <style>
+            .hide
+            {
+                display: none;
+            }
+        </style>
+        <style>
+            .navigator
+            {
+                position: fixed;
+                top: 20px; right: 20px;
+                font-size: 20px;
+            }
+        </style>
 
         <script>
             const SINGLE_LOW_CONSONANT = 0;
             const PAIRED_LOW_CONSONANT = 1;
             const MIDDLE_CONSONANT = 2;
             const HIGH_CONSONANT = 3;
+            const DIGIT = 4;
+            const OTHER = 5;
 
             const THAI_CHAR_INFO = Object.freeze(
                 {
+                    // Consonants.
                     'ก': Object.freeze({ name: "ไก่",    translitChar: "gɔ",  translitName: "gai(l)",         meaning: "chicken",   category: MIDDLE_CONSONANT     }),
                     'ข': Object.freeze({ name: "ไข่",    translitChar: "kɔ",  translitName: "kai(l)",         meaning: "egg",       category: HIGH_CONSONANT       }),
                     'ฃ': Object.freeze({ name: "ขวด",   translitChar: "kɔ",  translitName: "kuuat(l)",       meaning: "bottle",    category: HIGH_CONSONANT       }),
@@ -150,7 +167,27 @@
                     'ห': Object.freeze({ name: "หีบ",    translitChar: "hɔ",  translitName: "hiip(l)",        meaning: "box",       category: HIGH_CONSONANT       }),
                     'ฬ': Object.freeze({ name: "จุฬา",   translitChar: "lɔ",  translitName: "ju(l)laa(m)",    meaning: "kite",      category: PAIRED_LOW_CONSONANT }),
                     'อ': Object.freeze({ name: "อ่าง",   translitChar: "ɔ",   translitName: "aang(l)",        meaning: "basin",     category: MIDDLE_CONSONANT     }),
-                    'ฮ': Object.freeze({ name: "นกฮูก",  translitChar: "hɔ",  translitName: "nok(h) huuk(f)", meaning: "owl",       category: SINGLE_LOW_CONSONANT })
+                    'ฮ': Object.freeze({ name: "นกฮูก",  translitChar: "hɔ",  translitName: "nok(h) huuk(f)", meaning: "owl",       category: SINGLE_LOW_CONSONANT }),
+
+                    // Digits.
+                    '๐': Object.freeze({ name: "ศูนย์", translitChar: "", translitName: "suun(r)",  meaning: "zero",  category: DIGIT }),
+                    '๑': Object.freeze({ name: "หนึ่ง", translitChar: "", translitName: "nʉng(l)",  meaning: "one",   category: DIGIT }),
+                    '๒': Object.freeze({ name: "สอง", translitChar: "", translitName: "sɔɔng(r)", meaning: "two",   category: DIGIT }),
+                    '๓': Object.freeze({ name: "สาม", translitChar: "", translitName: "saam(r)",  meaning: "three", category: DIGIT }),
+                    '๔': Object.freeze({ name: "สี่",   translitChar: "", translitName: "sii(l)",   meaning: "four",  category: DIGIT }),
+                    '๕': Object.freeze({ name: "ห้า",  translitChar: "", translitName: "haa(f)",   meaning: "five",  category: DIGIT }),
+                    '๖': Object.freeze({ name: "หก",  translitChar: "", translitName: "hok(l)",   meaning: "six",   category: DIGIT }),
+                    '๗': Object.freeze({ name: "เจ็ด", translitChar: "", translitName: "jet(l)",   meaning: "seven", category: DIGIT }),
+                    '๘': Object.freeze({ name: "แปด", translitChar: "", translitName: "bpεεt(l)", meaning: "eight", category: DIGIT }),
+                    '๙': Object.freeze({ name: "เก้า", translitChar: "", translitName: "gaao(f)",  meaning: "nine",  category: DIGIT }),
+
+                    // Others.
+                    'ฤ': Object.freeze({ name: "ตัว ฤ",      translitChar: "", translitName: "dtua(m) rʉ(h)",          meaning: "",                 category: OTHER }),
+                    'ฦ': Object.freeze({ name: "ตัว ฦ",      translitChar: "", translitName: "dtua(m) lʉ(h)",          meaning: "",                 category: OTHER }),
+                    'ๅ': Object.freeze({ name: "ลากข้างยาว", translitChar: "", translitName: "laak(f)kaang(f)yaao(m)", meaning: "lengthens rʉ, lʉ", category: OTHER }),
+                    'ฯ': Object.freeze({ name: "ไปยาลน้อย",  translitChar: "", translitName: "bpai(m)yaan(m)nɔɔi(h)",  meaning: "shortened",        category: OTHER }),
+                    'ๆ': Object.freeze({ name: "ไม้ยมก",     translitChar: "", translitName: "maai(h)ya(h)mok(h)",     meaning: "reduplicated",     category: OTHER }),
+                    '๚': Object.freeze({ name: "อังคั่นคู่",     translitChar: "", translitName: "ang(m)kan(f)kuu(f)",     meaning: "long section end", category: OTHER })
                 });
 
             /*
@@ -181,7 +218,10 @@
                         acc[sound] = set;
                     }
 
-                    set.add(char);
+                    if (sound.length !== 0)
+                    {
+                        set.add(char);
+                    }
 
                     return acc;
                 },
@@ -267,7 +307,7 @@
     -->
     <body style="touch-action: manipulation;">
         <div class="outer-flex">
-            <div class="specimen-and-tones-grid">
+            <div id="consonants" class="specimen-and-tones-grid">
 
                 <!--
                     25cc is supposedly the placeholder, but it is not needed on iPhone, which renders tone marks
@@ -340,6 +380,24 @@
                 </div>
             </div>
 
+            <div id="others" class="specimen-and-tones-grid hide">
+                <div>
+                    <div class="consonant-class-label">
+                        Digits
+                    </div>
+                    <div class=thai-specimen style="color: black;"><span id="digit-specimens">๐๑๒๓๔๕๖๗๘๙</span></div>
+                </div>
+                <div></div>
+
+                <div>
+                    <div class="consonant-class-label thai-specimen-border">
+                        Others
+                    </div>
+                    <div class=thai-specimen style="color: black;"><span id="other-specimens">ฤฦฯๆ๚ๅ</span></div>
+                </div>
+                <div></div>
+            </div>
+
             <!-- flex row 2 -->
             <div style="margin-top: 8; border-top: 1px solid gray;">
                 <div style="margin-top: 8;">
@@ -353,11 +411,18 @@
                 const lowPairedElement = document.getElementById("low-paired-specimens");
                 const middleElement = document.getElementById("middle-specimens");
                 const highElement = document.getElementById("high-specimens");
+                const digitElement = document.getElementById("digit-specimens");
+                const otherElement = document.getElementById("other-specimens");
+
+                const allElements
+                    = [lowSingleElement, lowPairedElement, middleElement, highElement, digitElement, otherElement];
 
                 lowSingleElement.addEventListener("click", (event) => { onSpecimenClick(event, lowSingleElement); });
                 lowPairedElement.addEventListener("click", (event) => { onSpecimenClick(event, lowPairedElement); });
                 middleElement.addEventListener("click", (event) => { onSpecimenClick(event, middleElement); });
                 highElement.addEventListener("click", (event) => { onSpecimenClick(event, highElement); });
+                digitElement.addEventListener("click", (event) => { onSpecimenClick(event, digitElement); });
+                otherElement.addEventListener("click", (event) => { onSpecimenClick(event, otherElement); });
 
                 function onSpecimenClick(event, element)
                 {
@@ -375,7 +440,7 @@
                     const thaiChar = element.textContent.charAt(charIndex);
                     const soundGroup = THAI_CHARS_BY_SOUND[THAI_CHAR_INFO[thaiChar].translitChar];
 
-                    for (const elem of [lowSingleElement, lowPairedElement, middleElement, highElement])
+                    for (const elem of allElements)
                     {
                         elem.innerHTML = [...elem.textContent].map((char, i) =>
                             ((elem === element) && (i == charIndex))
@@ -395,5 +460,40 @@
             </script>
         </div>
 
+        <!-- 8592 left arrow, 8594 right arrow -->
+        <button id="to-others" class="navigator" onclick="switchToOthers()">
+            &#8594;
+        </button>
+        <button id="to-consonants" class="navigator hide" onclick="switchToConsonants()">
+            &#8592;
+        </button>
+        <script>
+            function switchToOthers()
+            {
+                // Show, hide.
+                switchTo(['others', 'to-consonants'], ['consonants', 'to-others']);
+            }
+            function switchToConsonants()
+            {
+                // Show, hide.
+                switchTo(['consonants', 'to-others'], ['others', 'to-consonants']);
+            }
+
+            function switchTo(showElementIds, hideElementIds)
+            {
+                for (const id of showElementIds)
+                {
+                    document.getElementById(id).classList.remove('hide');
+                }
+
+                for (const id of hideElementIds)
+                {
+                    document.getElementById(id).classList.add('hide');
+                }
+
+                document.getElementById("selected-char-thai").innerText = "";
+                document.getElementById("selected-char-translit").innerHTML = "";
+            }
+        </script>
     </body>
 </html>
