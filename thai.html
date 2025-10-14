@@ -191,6 +191,16 @@
                 });
 
             /*
+                These are in canonical order.
+             */
+            const THAI_LOW_CONSONANTS_SINGLE = "คฅฆชซฌฑฒทธพฟภฮ";
+            const THAI_LOW_CONSONANTS_PAIRED = "งญณนมยรลวฬ";
+            const THAI_MID_CONSONANTS = "กจฎฏดตบปอ";
+            const THAI_HIGH_CONSONANTS = "ขฃฉฐถผฝศษสห";
+            const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
+            const THAI_OTHER_CHARS = "ฤฦฯๆ๚ๅ";
+
+            /*
                 Preprocess the Thai character info into HTML, as an optimization. Otherwise we'd need to do this work
                 upon each change in selected char.
              */
@@ -319,8 +329,8 @@
                     <div class="consonant-class-label">
                         Low (single, paired)
                     </div>
-                    <div class=thai-specimen style="color: rgb(52, 103, 0);"><span id="low-single-specimens">คฅฆชซฌฑฒทธพฟภฮ</span></div>
-                    <div class=thai-specimen style="color: rgb(0, 103, 103);"><span id="low-paired-specimens">งญณนมยรลวฬ</span></div>
+                    <div class=thai-specimen style="color: rgb(52, 103, 0);"><span id="low-single-specimens"></span></div>
+                    <div class=thai-specimen style="color: rgb(0, 103, 103);"><span id="low-paired-specimens"></span></div>
                 </div>
                 <div class="tone-info-grid">
                     <div class="tone-info">&#x25cf</div>
@@ -341,7 +351,7 @@
                     <div class="consonant-class-label thai-specimen-border">
                         Middle
                     </div>
-                    <div class=thai-specimen style="color: rgb(103, 0, 0);"><span id="middle-specimens">กจฎฏดตบปอ</span></div>
+                    <div class=thai-specimen style="color: rgb(103, 0, 0);"><span id="middle-specimens"></span></div>
                 </div>
                 <div class="tone-info-grid">
                     <div class="tone-info">&#x25cf</div>
@@ -362,7 +372,7 @@
                     <div class="consonant-class-label thai-specimen-border">
                         High
                     </div>
-                    <div class=thai-specimen style="color: rgb(83, 0, 167);"><span id="high-specimens">ขฃฉฐถผฝศษสห</span></div>
+                    <div class=thai-specimen style="color: rgb(83, 0, 167);"><span id="high-specimens"></span></div>
                 </div>
                 <div class="tone-info-grid">
                     <div class="tone-info">&#x25cf</div>
@@ -385,7 +395,7 @@
                     <div class="consonant-class-label">
                         Digits
                     </div>
-                    <div class=thai-specimen style="color: black;"><span id="digit-specimens">๐๑๒๓๔๕๖๗๘๙</span></div>
+                    <div class=thai-specimen style="color: black;"><span id="digit-specimens"></span></div>
                 </div>
                 <div></div>
 
@@ -393,7 +403,7 @@
                     <div class="consonant-class-label thai-specimen-border">
                         Others
                     </div>
-                    <div class=thai-specimen style="color: black;"><span id="other-specimens">ฤฦฯๆ๚ๅ</span></div>
+                    <div class=thai-specimen style="color: black;"><span id="other-specimens"></span></div>
                 </div>
                 <div></div>
             </div>
@@ -423,6 +433,8 @@
                 highElement.addEventListener("click", (event) => { onSpecimenClick(event, highElement); });
                 digitElement.addEventListener("click", (event) => { onSpecimenClick(event, digitElement); });
                 otherElement.addEventListener("click", (event) => { onSpecimenClick(event, otherElement); });
+
+                reorderSpecimens(true);
 
                 function onSpecimenClick(event, element)
                 {
@@ -457,16 +469,67 @@
                     document.getElementById("selected-char-translit").innerHTML = htm.translit;
                 }
 
+                /*
+                 */
+                function reorderSpecimens(isCanonical)
+                {
+                    let lowSingle = THAI_LOW_CONSONANTS_SINGLE;
+                    let lowPaired = THAI_LOW_CONSONANTS_PAIRED;
+                    let mid = THAI_MID_CONSONANTS;
+                    let high = THAI_HIGH_CONSONANTS;
+                    let digits = THAI_DIGITS;
+                    let others = THAI_OTHER_CHARS;
+
+                    if (!isCanonical)
+                    {
+                        // Reorder.
+                        lowSingle = permuteString(lowSingle);
+                        lowPaired = permuteString(lowPaired);
+                        mid = permuteString(mid);
+                        high = permuteString(high);
+                        digits = permuteString(digits);
+
+                        // Skip reordering the other chars because the rue/lue extender char does weird things if
+                        // drawn immediately adjacent to rue or lue.
+                    }
+
+                    lowSingleElement.innerText = lowSingle;
+                    lowPairedElement.innerText = lowPaired;
+                    middleElement.innerText = mid;
+                    highElement.innerText = high;
+                    digitElement.innerText = digits;
+                    otherElement.innerText = others;
+
+                    clearCharInfo();
+                }
+
+                function permuteString(s)
+                {
+                    return s.split('').sort(() => Math.random() - 0.5).join('');
+                }
+
+                function clearCharInfo()
+                {
+                    document.getElementById("selected-char-thai").innerText = "";
+                    document.getElementById("selected-char-translit").innerHTML = "";
+                }
             </script>
         </div>
 
-        <!-- 8592 left arrow, 8594 right arrow -->
-        <button id="to-others" class="navigator" onclick="switchToOthers()">
-            &#8594;
-        </button>
-        <button id="to-consonants" class="navigator hide" onclick="switchToConsonants()">
-            &#8592;
-        </button>
+        <div style="display: flex; flex-direction: column; gap: 5px; position: fixed; top: 20px; right: 30px;">
+
+            <!-- 8592 left arrow, 8594 right arrow -->
+            <button id="to-others" style="font-size: 20px;" onclick="switchToOthers()">
+                &#8594;
+            </button>
+            <button id="to-consonants" class="hide" style="font-size: 20px;" onclick="switchToConsonants()">
+                &#8592;
+            </button>
+
+            <button style="font-size: 20px;" onclick="reorderSpecimens(false)">Randomize</button>
+            <button style="font-size: 20px;" onclick="reorderSpecimens(true)">Standard</button>
+        </div>
+
         <script>
             function switchToOthers()
             {
@@ -491,8 +554,7 @@
                     document.getElementById(id).classList.add('hide');
                 }
 
-                document.getElementById("selected-char-thai").innerText = "";
-                document.getElementById("selected-char-translit").innerHTML = "";
+                clearCharInfo();
             }
         </script>
     </body>
