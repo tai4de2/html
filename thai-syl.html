@@ -6,12 +6,6 @@
         <meta charset="UTF-8" />
         <title>thai-syllables-html</title>
 
-        <!--
-            Ayuthaya, Krungthep, Sukhumvit Set, Thonburi, Sathu, Silom
-                [Default = Thonburi]
-            400 = normal weight
-        -->
-
         <script>
             const LOW_CONSONANT = "low";
             const MIDDLE_CONSONANT = "mid";
@@ -451,13 +445,10 @@
             {
                 c = c[0];
 
-                //     U+0E31 a      U+0E34 i      U+0E35 ii     U+0E36 ʉ      U+0E37 ʉʉ     U+0E4D นิคหิต
-                return (c === 'ั') || (c === 'ิ') || (c === 'ี') || (c === 'ึ') || (c === 'ื') || (c === 0xe4d)
+                //     U+0E31 a      U+0E34 i      U+0E35 ii     U+0E36 ʉ      U+0E37 ʉʉ     U+0E38 u      U+0E39 uu
+                return (c === 'ั') || (c === 'ิ') || (c === 'ี') || (c === 'ึ') || (c === 'ื') || (c === 'ุ') || (c === 'ู');
 
-                    // Grok says these are not included (u, uu, ไม้ไต่คู้, การันต์).
-                    // || (c === 'ุ') || (c === 'ู')
-                    // || (c === '็') || (c === '์')
-                    ;
+                // Also U+0E3A (phinthu), U+0E47 (mai thaiku), U+0E4D (nikhahit) -- but we don't use these.
             }
 
             /*
