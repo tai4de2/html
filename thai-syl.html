@@ -1,0 +1,537 @@
+<!--  python3 -m http.server 8085 -->
+
+<html>
+
+    <head>
+        <meta charset="UTF-8" />
+        <title>thai-syllables-html</title>
+
+        <!--
+            Ayuthaya, Krungthep, Sukhumvit Set, Thonburi, Sathu, Silom
+                [Default = Thonburi]
+            400 = normal weight
+        -->
+
+        <script>
+            const LOW_CONSONANT = "low";
+            const MIDDLE_CONSONANT = "mid";
+            const HIGH_CONSONANT = "high";
+
+            const VOWEL_SHORT = 0;
+            const VOWEL_LONG = 1;
+
+            const FINAL_CONSONANT_PROHIBITED = 0;
+            const FINAL_CONSONANT_REQUIRED = 1;
+            const FINAL_CONSONANT_OPTIONAL = 2;
+
+            const RESONANCE_NONE = 0;
+            const RESONANCE_SONORANT = 1;
+            const RESONANCE_PLOSIVE = 2;
+
+            const SYLLABLE_LIVE = 0;
+            const SYLLABLE_DEAD_SHORT = 1;
+            const SYLLABLE_DEAD_LONG = 2;
+
+            const THAI_VOWEL_INFO = Object.freeze(
+                [
+                    // The first อ is the placeholder to be replaced with the consonant.
+                    Object.freeze({ vowel: "อะ",   translit: "a",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อั",    translit: "a",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อา",   translit: "aa",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อิ",    translit: "i",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อี",    translit: "ii",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อึ",    translit: "ʉ",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อื",    translit: "ʉʉ",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อือ",   translit: "ʉ",    length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อุ",    translit: "u",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อู",    translit: "uu",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "เอะ",  translit: "e",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอ็",   translit: "e",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: false }),
+                    Object.freeze({ vowel: "เอ",   translit: "ee",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "แอะ",  translit: "ε",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "แอ็",   translit: "ε",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: false }),
+                    Object.freeze({ vowel: "แอ",   translit: "εε",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "โอะ",  translit: "o",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "โอ",   translit: "oo",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "เอาะ", translit: "ɔ",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อ็อ",   translit: "ɔ",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: false }),
+                    Object.freeze({ vowel: "ออ",   translit: "ɔɔ",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "เออะ", translit: "ə",    length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เออ",  translit: "əə",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "เอิ",   translit: "əə",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: true  }),
+                    Object.freeze({ vowel: "เอียะ", translit: "ia",   length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอีย",  translit: "iia",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "เอือะ", translit: "ʉa",   length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอือ",  translit: "ʉʉa",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อัวะ",  translit: "ua",   length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อัว",   translit: "uua",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อว",   translit: "uua",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_REQUIRED,   allowsTone: true  }),
+                    Object.freeze({ vowel: "อิว",   translit: "iu",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอ็ว",  translit: "eo",   length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: false }),
+                    Object.freeze({ vowel: "เอว",  translit: "eeo",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "แอว",  translit: "εo",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอา",  translit: "ao",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อาว",  translit: "aao",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอียว", translit: "iiao", length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อัย",   translit: "ai",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "ใอ",   translit: "ai",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "ไอ",   translit: "ai",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_OPTIONAL,   allowsTone: true  }),
+                    Object.freeze({ vowel: "ไอย",  translit: "ai",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อาย",  translit: "aai",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อ็อย",  translit: "oi",   length: VOWEL_SHORT, finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: false }),
+                    Object.freeze({ vowel: "ออย",  translit: "ɔɔi",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "โอย",  translit: "ooi",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อุย",   translit: "ui",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอย",  translit: "əəi",  length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อวย",  translit: "uuai", length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "เอือย", translit: "ʉʉai", length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    Object.freeze({ vowel: "อำ",   translit: "am",   length: VOWEL_LONG,  finalConsonantRule: FINAL_CONSONANT_PROHIBITED, allowsTone: true  }),
+                    // Also: อ็, but it's only used with ก็, so don't bother.
+                ]);
+
+            const THAI_CONSONANT_INFO = Object.freeze(
+                {
+                    'ก': Object.freeze({ name: "ไก่",    translitChar: "gɔ",  translitName: "gai(l)",         meaning: "chicken",   finalTranslit: 'k',  resonance: RESONANCE_PLOSIVE  }),
+                    'ข': Object.freeze({ name: "ไข่",    translitChar: "kɔ",  translitName: "kai(l)",         meaning: "egg",       finalTranslit: 'k',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฃ': Object.freeze({ name: "ขวด",   translitChar: "kɔ",  translitName: "kuuat(l)",       meaning: "bottle",    finalTranslit: 'k',  resonance: RESONANCE_PLOSIVE  }),
+                    'ค': Object.freeze({ name: "ควาย",  translitChar: "kɔ",  translitName: "kwaai(m)",       meaning: "buffalo",   finalTranslit: 'k',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฅ': Object.freeze({ name: "คน",    translitChar: "kɔ",  translitName: "kon(m)",         meaning: "person",    finalTranslit: 'k',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฆ': Object.freeze({ name: "ระฆัง",  translitChar: "kɔ",  translitName: "ra(h)kang(m)",   meaning: "bell",      finalTranslit: 'k',  resonance: RESONANCE_PLOSIVE  }),
+                    'ง': Object.freeze({ name: "งู",     translitChar: "ngɔ", translitName: "nguu(m)",        meaning: "snake",     finalTranslit: 'ng', resonance: RESONANCE_SONORANT }),
+                    'จ': Object.freeze({ name: "จาน",   translitChar: "jɔ",  translitName: "jaan(m)",        meaning: "plate",     finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฉ': Object.freeze({ name: "ฉิ่ง",    translitChar: "chɔ", translitName: "ching(l)",       meaning: "cymbals",   finalTranslit: null, resonance: RESONANCE_PLOSIVE  }),
+                    'ช': Object.freeze({ name: "ช้าง",   translitChar: "chɔ", translitName: "chaang(h)",      meaning: "elephant",  finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ซ': Object.freeze({ name: "โซ่",    translitChar: "sɔ",  translitName: "soo(f)",         meaning: "chain",     finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฌ': Object.freeze({ name: "เฌอ",   translitChar: "chɔ", translitName: "chəə(m)",        meaning: "tree",      finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ญ': Object.freeze({ name: "หญิง",   translitChar: "yɔ",  translitName: "ying(r)",        meaning: "woman",     finalTranslit: 'n',  resonance: RESONANCE_SONORANT }),
+                    'ฎ': Object.freeze({ name: "ชฎา",   translitChar: "dɔ",  translitName: "cha(h)daa(m)",   meaning: "headdress", finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฏ': Object.freeze({ name: "ปฏัก",   translitChar: "dtɔ", translitName: "bpa(l)dtak(l)",  meaning: "javelin",   finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฐ': Object.freeze({ name: "ฐาน",   translitChar: "tɔ",  translitName: "taan(r)",        meaning: "pedestal",  finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฑ': Object.freeze({ name: "มณโฑ",  translitChar: "tɔ",  translitName: "mon(m)to(m)",    meaning: "Montho",    finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฒ': Object.freeze({ name: "ผู้เฒ่า",  translitChar: "tɔ",  translitName: "puu(f)taao(f)",  meaning: "elder",     finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ณ': Object.freeze({ name: "เณร",   translitChar: "nɔ",  translitName: "nen(m)",         meaning: "samanera",  finalTranslit: 'n',  resonance: RESONANCE_SONORANT }),
+                    'ด': Object.freeze({ name: "เด็ก",   translitChar: "dɔ",  translitName: "dek(l)",         meaning: "child",     finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ต': Object.freeze({ name: "เต่า",   translitChar: "dtɔ", translitName: "dtao(l)",        meaning: "turtle",    finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ถ': Object.freeze({ name: "ถุง",    translitChar: "tɔ",  translitName: "tung(r)",        meaning: "sack",      finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ท': Object.freeze({ name: "ทหาร",  translitChar: "tɔ",  translitName: "ta(h)haan(r)",   meaning: "soldier",   finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ธ': Object.freeze({ name: "ธง",    translitChar: "tɔ",  translitName: "tong(m)",        meaning: "flag",      finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'น': Object.freeze({ name: "หนู",    translitChar: "nɔ",  translitName: "nuu(r)",         meaning: "mouse",     finalTranslit: 'n',  resonance: RESONANCE_SONORANT }),
+                    'บ': Object.freeze({ name: "ใบไม้",  translitChar: "bɔ",  translitName: "bai(m)mai(h)",   meaning: "leaf",      finalTranslit: 'p',  resonance: RESONANCE_PLOSIVE  }),
+                    'ป': Object.freeze({ name: "ปลา",   translitChar: "bpɔ", translitName: "bplaa(m)",       meaning: "fish",      finalTranslit: 'p',  resonance: RESONANCE_PLOSIVE  }),
+                    'ผ': Object.freeze({ name: "ผึ้ง",    translitChar: "pɔ",  translitName: "pʉng(f)",        meaning: "bee",       finalTranslit: null, resonance: RESONANCE_PLOSIVE  }),
+                    'ฝ': Object.freeze({ name: "ฝา",    translitChar: "fɔ",  translitName: "faa(r)",         meaning: "lid",       finalTranslit: null, resonance: RESONANCE_PLOSIVE  }),
+                    'พ': Object.freeze({ name: "พาน",   translitChar: "pɔ",  translitName: "paan(m)",        meaning: "phan",      finalTranslit: 'p',  resonance: RESONANCE_PLOSIVE  }),
+                    'ฟ': Object.freeze({ name: "ฟัน",    translitChar: "fɔ",  translitName: "fan(m)",         meaning: "tooth",     finalTranslit: 'p',  resonance: RESONANCE_PLOSIVE  }),
+                    'ภ': Object.freeze({ name: "สำเภา", translitChar: "pɔ",  translitName: "sam(r)pao(m)",   meaning: "junk",      finalTranslit: 'p',  resonance: RESONANCE_PLOSIVE  }),
+                    'ม': Object.freeze({ name: "ม้า",    translitChar: "mɔ",  translitName: "maa(h)",         meaning: "horse",     finalTranslit: 'm',  resonance: RESONANCE_SONORANT }),
+                    'ย': Object.freeze({ name: "ยักษ์",   translitChar: "yɔ",  translitName: "yak(h)",         meaning: "giant",     finalTranslit: null, resonance: RESONANCE_SONORANT }),
+                    'ร': Object.freeze({ name: "เรือ",   translitChar: "rɔ",  translitName: "rʉa(m)",         meaning: "boat",      finalTranslit: 'n',  resonance: RESONANCE_SONORANT }),
+                    'ล': Object.freeze({ name: "ลิง",    translitChar: "lɔ",  translitName: "ling(m)",        meaning: "monkey",    finalTranslit: 'n',  resonance: RESONANCE_SONORANT }),
+                    'ว': Object.freeze({ name: "แหวน",  translitChar: "wɔ",  translitName: "wεεn(r)",        meaning: "ring",      finalTranslit: null, resonance: RESONANCE_SONORANT }),
+                    'ศ': Object.freeze({ name: "ศาลา",  translitChar: "sɔ",  translitName: "saa(r)laa(m)",   meaning: "pavillion", finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ษ': Object.freeze({ name: "ฤๅษี",   translitChar: "sɔ",  translitName: "rʉʉ(m)sii(r)",   meaning: "hermit",    finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ส': Object.freeze({ name: "เสือ",   translitChar: "sɔ",  translitName: "sʉʉa(r)",        meaning: "tiger",     finalTranslit: 't',  resonance: RESONANCE_PLOSIVE  }),
+                    'ห': Object.freeze({ name: "หีบ",    translitChar: "hɔ",  translitName: "hiip(l)",        meaning: "box",       finalTranslit: null, resonance: RESONANCE_PLOSIVE  }),
+                    'ฬ': Object.freeze({ name: "จุฬา",   translitChar: "lɔ",  translitName: "ju(l)laa(m)",    meaning: "kite",      finalTranslit: 'n',  resonance: RESONANCE_SONORANT }),
+                    'อ': Object.freeze({ name: "อ่าง",   translitChar: "ɔ",   translitName: "aang(l)",        meaning: "basin",     finalTranslit: null, resonance: RESONANCE_NONE     }),
+                    'ฮ': Object.freeze({ name: "นกฮูก",  translitChar: "hɔ",  translitName: "nok(h) huuk(f)", meaning: "owl",       finalTranslit: null, resonance: RESONANCE_PLOSIVE  })
+                });
+
+            /*
+                These are in canonical order.
+             */
+            const LOW_CONSONANTS = "คฅฆชซฌฑฒทธพฟภฮงญณนมยรลวฬ";
+            const MID_CONSONANTS = "กจฎฏดตบปอ";
+            const HIGH_CONSONANTS = "ขฃฉฐถผฝศษสห";
+            const ALL_CONSONANTS = LOW_CONSONANTS + MID_CONSONANTS + HIGH_CONSONANTS;
+
+            // We consider ว and ย to be part of vowels, and they're thus deliberately omitted here.
+            const FINAL_CONSONANTS = "คฅฆชซฌฑฒทธพฟภงญณนมรลฬกจฎฏดตบปขฃฐถศษส";
+
+            const MAI_EEK = '\u0e48';
+            const MAI_TOO = '\u0e49';
+            const MAI_DTRII = '\u0e4a';
+            const MAI_JATDTAWAA = '\u0e4b';
+            const VALID_MID_TONES = [ null, MAI_EEK, MAI_TOO, MAI_DTRII, MAI_JATDTAWAA ];
+            const VALID_NON_MID_TONES = [ null, MAI_EEK, MAI_TOO ];
+
+            /*
+                Returns an object.
+
+                    thai: Thai text for the syllable
+                    transliteration: transliterated html for the syllable (with tones formatted as superscripts)
+                    explanation: text for the explanation
+             */
+            function createRandomSyllable()
+            {
+                // Anchor consonant: any consonant will do.
+                // There are 44 consonants:
+                //      24 low consonants
+                //       9 middle consonants
+                //      11 high consonants
+                x = randomIntExclusive(44);
+                validTones = VALID_NON_MID_TONES;
+                if (x < 24) { category = LOW_CONSONANT; }
+                else if (x < 33) { category = MIDDLE_CONSONANT; validTones = VALID_MID_TONES; }
+                else { category = HIGH_CONSONANT; }
+                anchor = ALL_CONSONANTS[x];
+
+                // Vowel: any vowel will do.
+                vowel = THAI_VOWEL_INFO[randomIntExclusive(THAI_VOWEL_INFO.length)];
+
+                // Final consonant.
+                // For the case where the final consonant is optional, give a 25% chance that we have none.
+                final = null;
+                finalRule = vowel.finalConsonantRule;
+                if (((finalRule == FINAL_CONSONANT_OPTIONAL) && (randomIntExclusive(4) != 0))
+                    || (finalRule == FINAL_CONSONANT_REQUIRED))
+                {
+                    // Some consonants are not allowed as finals. If we happen to choose one here, final will
+                    // still be null, which is fine.
+                    final = FINAL_CONSONANTS[randomIntExclusive(FINAL_CONSONANTS.length)];
+                }
+
+                // Tone mark.
+                tone = vowel.allowsTone ? validTones[randomIntExclusive(validTones.length)] : null;
+
+                // At this point, we have anchor, vowel, final, and tone.
+                // Build the Thai text representing the syllable, and the transliteration.
+                thai = buildSyllableThai(anchor, vowel, final, tone);
+                translit = buildSyllableTranslit(anchor, vowel, final, tone, category);
+                explain = buildSyllableExplanation(category, vowel, final, tone);
+
+                // Done.
+                return { thai: thai, transliteration: translit, explanation: explain};
+            }
+
+            /*
+                Returns a string.
+             */
+            function buildSyllableThai(anchorConsonant, vowelInfo, finalConsonant, toneMark)
+            {
+                result = "";
+
+                syllableTemplate = vowelInfo.vowel;
+                syllableTemplateLength = syllableTemplate.length;
+
+                sawPlaceholder = false;
+
+                for (let i = 0; i < syllableTemplateLength; ++i)
+                {
+                    syllableTemplateChar = syllableTemplate[i];
+
+                    if (!sawPlaceholder && (syllableTemplateChar === "อ"))
+                    {
+                        result += anchorConsonant;
+                        sawPlaceholder = true;
+
+                        if (toneMark != null)
+                        {
+                            // The tone mark usually apears in memory immediately following the consonant.
+                            // But sometimes, the tone mark must follow the *next* character instead.
+                            if (i != (syllableTemplateLength - 1))
+                            {
+                                syllableTemplateChar = syllableTemplate[i + 1];
+                                if (delaysToneMark(syllableTemplateChar))
+                                {
+                                    ++i;
+                                    result += syllableTemplateChar;
+                                }
+                            }
+
+                            result += toneMark;
+                        }
+                    }
+                    else result += syllableTemplateChar;
+                }
+
+                if (final != null) result += final;
+
+                return result;
+            }
+
+            /*
+                Returns html, i.e. formatted with superscripts for the tones.
+             */
+            function buildSyllableTranslit(anchorConsonant, vowelInfo, finalConsonant, toneMark, category)
+            {
+                result = "";
+
+                anchorInfo = THAI_CONSONANT_INFO[anchorConsonant];
+
+                // Initial consonant. Strip off the final char (always ɔ).
+                result += anchorInfo.translitChar.slice(0, -1);
+
+                // Vowel.
+                result += vowelInfo.translit;
+
+                // Final consonant.
+                finalInfo = null;
+                if (finalConsonant != null)
+                {
+                    finalInfo = THAI_CONSONANT_INFO[finalConsonant];
+                    result += finalInfo.finalTranslit;
+                }
+
+                // Tone.
+                if (toneMark == null)
+                {
+                    syllableType = determineSyllableType(vowelInfo, finalInfo);
+
+                    if (syllableType == SYLLABLE_LIVE) result += (category === HIGH_CONSONANT) ? "(r)" : "(m)";
+                    else if (syllableType == SYLLABLE_DEAD_LONG) result += (category === LOW_CONSONANT) ? "(f)" : "(l)";
+                    else if (syllableType == SYLLABLE_DEAD_SHORT) result += (category === LOW_CONSONANT) ? "(h)" : "(l)";
+                }
+                else if (toneMark[0] === MAI_EEK) result += (category === LOW_CONSONANT) ? "(f)" : "(l)";
+                else if (toneMark[0] === MAI_TOO) result += (category === LOW_CONSONANT) ? "(h)" : "(f)";
+                else if (toneMark[0] === MAI_DTRII) result += "(h)";
+                else if (toneMark[0] === MAI_JATDTAWAA) result += "(r)";
+
+                // Done; format as html.
+                return formatTransliteratedText(result);
+            }
+
+            /*
+             */
+            function buildSyllableExplanation(category, vowelInfo, finalConsonant, toneMark)
+            {
+                explanation = category + " consonant";
+
+                explanation += " + ";
+
+                finalInfo = null;
+                if (finalConsonant != null)
+                {
+                    finalInfo = THAI_CONSONANT_INFO[finalConsonant];
+                }
+
+                syllableType = determineSyllableType(vowelInfo, finalInfo);
+                if (syllableType == SYLLABLE_LIVE) explanation += "live";
+                else if (syllableType == SYLLABLE_DEAD_LONG)
+                {
+                    explanation += (category === LOW_CONSONANT) ? "dead long" : "dead";
+                }
+                else if (syllableType == SYLLABLE_DEAD_SHORT)
+                {
+                    explanation += (category === LOW_CONSONANT) ? "dead short" : "dead";
+                }
+
+                explanation += " syllable";
+
+                if (toneMark != null)
+                {
+                    explanation += " + ";
+                    explanation += toneMark;
+                }
+
+                return explanation;
+            }
+
+            /*
+                Syllable type: live, dead short, dead long.
+                The distinction between dead short and dead long is only relevant for low consonants, but there's
+                no reason to not just always calculate them here.
+
+                    Final     Vowel
+                    consonant length   Kind
+                    --------- ------ → ----------
+                (1) None      Short    Dead short
+                (2) None      Long     Live
+                (3) Plosive   Short    Dead short
+                (4) Plosive   Long     Dead long
+                (5) Sonorant  Short    Live
+                (6) Sonorant  Long     Live
+            */
+            function determineSyllableType(vowelInfo, finalConsonantInfo)
+            {
+                vowelLength = vowel.length;
+
+                // Rule (1) or (2).
+                if (finalConsonantInfo == null)
+                {
+                    //                                    Rule (1)              Rule (2)
+                    return (vowelLength == VOWEL_SHORT) ? SYLLABLE_DEAD_SHORT : SYLLABLE_LIVE
+                }
+
+                // Rule (3) or (4).
+                if (finalConsonantInfo.resonance == RESONANCE_PLOSIVE)
+                {
+                    //                                    Rule (3)              Rule (4)
+                    return (vowelLength == VOWEL_SHORT) ? SYLLABLE_DEAD_SHORT : SYLLABLE_DEAD_LONG;
+                }
+
+                // Rule (5) or (6).
+                if (finalConsonantInfo.resonance == RESONANCE_SONORANT)
+                {
+                    return SYLLABLE_LIVE;
+                }
+
+                // Should never get here.
+                return SYLLABLE_LIVE;
+            }
+
+            /*
+             */
+            function formatTransliteratedText(transliteratedText)
+            {
+                let formattedText = "";
+
+                const STATE_NORMAL = 0;
+                const STATE_SAW_LPAREN = 1;
+                const STATE_SAW_TONE = 2;
+                let state = STATE_NORMAL;
+
+                let originalToneChar = 0;
+                let toneString = "";
+
+                let transliteratedTextLength = transliteratedText.length;
+                let i = 0;
+                while (i <= transliteratedTextLength)
+                {
+                    const ch = (i == transliteratedTextLength) ? 0 : transliteratedText.charAt(i);
+
+                    switch (state)
+                    {
+                    case STATE_NORMAL:
+                        if (ch == '(') state = STATE_SAW_LPAREN;
+                        else if (ch) formattedText += ch;
+                        ++i;
+                        break;
+
+                    case STATE_SAW_LPAREN:
+                        state = STATE_SAW_TONE;
+                        ++i;
+                        originalToneChar = ch;
+
+                        switch (ch)
+                        {
+                        case 'l': toneString = "L"; break;
+                        case 'm': toneString = "M"; break;
+                        case 'h': toneString = "H"; break;
+                        case 'r': toneString = "R"; break;
+                        case 'f': toneString = "F"; break;
+                        default:
+                            // Don't increment i; reprocess as normal char. For example, could be (.
+                            --i;
+                            state = STATE_NORMAL;
+                            break;
+                        }
+
+                        break;
+
+                    case STATE_SAW_TONE:
+                        if (ch == ')')
+                        {
+                            // Without "display: inline-block" the superscript font size seems to be ignored
+                            // on iPhone (works as expected on Mac).
+                            formattedText += `<sup style="font-size: 19px; color: gray; display: inline-block;">${toneString}</sup>`;
+                            ++i;
+                        }
+                        else
+                        {
+                            // Store (x but don't increment i; reprocess as normal char. For example, could be (.
+                            formattedText += originalToneChar;
+                        }
+
+                        state = STATE_NORMAL;
+                        break;
+                    }
+                }
+
+                return formattedText;
+            }
+
+            /*
+                Determines whether a codepoint pushes a tone mark away from a consonant by one codepoint.
+
+                Normally, a tone mark immediately follows its consonant in memory. But a few codepoints that are
+                written above a consonant come between the consonant and any tone mark attached to it.
+             */
+            function delaysToneMark(c)
+            {
+                c = c[0];
+
+                //     U+0E31 a      U+0E34 i      U+0E35 ii     U+0E36 ʉ      U+0E37 ʉʉ     U+0E4D นิคหิต
+                return (c === 'ั') || (c === 'ิ') || (c === 'ี') || (c === 'ึ') || (c === 'ื') || (c === 0xe4d)
+
+                    // Grok says these are not included (u, uu, ไม้ไต่คู้, การันต์).
+                    // || (c === 'ุ') || (c === 'ู')
+                    // || (c === '็') || (c === '์')
+                    ;
+            }
+
+            /*
+                Returns a random integer in the range [0, n).
+             */
+            function randomIntExclusive(n)
+            {
+                return Math.floor(Math.random() * n);
+            }
+        </script>
+    </head>
+
+    <!--
+        U+25CC is supposedly the placeholder, but it is not needed on iPhone, which renders tone marks
+        using some similar but smaller character automatically. Adding an explicit placeholder results in
+        there being two placeholders for each tone mark.
+
+        Disable double-tap zoom, which makes the page more responsive. Otherwise, a single tap is delayed waiting
+        to see if the second tap will occur.
+    -->
+    <body style="touch-action: manipulation;">
+        <div style="display:flex; flex-direction: column;">
+
+            <!-- flex row 1: next/advance button -->
+            <div id="ux" style="margin-bottom: 20px;">
+                <button id="advanceButton" style="font-size: 20px;" onclick="advance()">Next/advance</button>
+            </div>
+
+            <!-- flex row 2: Thai syllable -->
+            <div id="syllable" style="font-family: Ayuthaya; font-size: 50px; margin-bottom: 8px;">
+                This is the Thai syllable
+            </div>
+
+            <!-- flex row 3: transliteration -->
+            <div id="transliteration" style="font-size: 35px">
+                Transliteration
+            </div>
+
+            <!-- flex row 4: explanation -->
+            <div id="explanation" style="font-size: 25px">
+                Explanation
+            </div>
+        </div>
+
+        <script>
+            Syllable = null;
+            IsRevealed = false;
+
+            function advance()
+            {
+                if ((Syllable == null) || IsRevealed)
+                {
+                    // Initial state, or user is looking at a revealed syllable. Start a new syllable.
+                    Syllable = createRandomSyllable();
+                    document.getElementById("syllable").innerText = Syllable.thai;
+                    document.getElementById("transliteration").innerText = "";
+                    document.getElementById("explanation").innerText = "";
+
+                    IsRevealed = false;
+                }
+                else
+                {
+                    // User is looking at an unrevealed syllable. Reveal it.
+                    document.getElementById("transliteration").innerHTML = Syllable.transliteration;
+                    document.getElementById("explanation").innerText = explanation;
+
+                    IsRevealed = true;
+                }
+            }
+
+            advanceButton = document.getElementById("advanceButton");
+            advanceButton.focus();
+            advance();
+        </script>
+    </body>
+
+</html>
