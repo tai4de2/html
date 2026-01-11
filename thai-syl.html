@@ -6,6 +6,21 @@
         <meta charset="UTF-8" />
         <title>thai-syllables-html</title>
 
+        <!--
+            The Noto Thai family has support for a full set of combinations of consonant + vowel + tone marks.
+            Without that, many of the syllables we generate in this code get rendered with certain or all tone marks,
+            the circle in sara am, etc. attached to a placeholder (dotted circle) instead of the initial consonant.
+            Apparently many fonts, and Core Text's shaper, are very strict about enforcing a rigid set of arcane rules
+            about which combos are actually valid.
+
+            Noto Sans Thai       : modern loopless
+            Noto Sans Thai Looped: modern looped
+            Noto Serif Thai      : traditional looped
+        -->
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@400&display=swap" rel="stylesheet">
+
         <script>
             const LOW_CONSONANT = "low";
             const MIDDLE_CONSONANT = "mid";
@@ -192,10 +207,10 @@
                 // Build the Thai text representing the syllable, and the transliteration.
                 thai = buildSyllableThai(anchor, vowel, final, tone);
                 translit = buildSyllableTranslit(anchor, vowel, final, tone, category);
-                explain = buildSyllableExplanation(category, vowel, final, tone);
+                explain = buildSyllableExplanation(anchor, category, vowel, final, tone);
 
                 // Done.
-                return { thai: thai, transliteration: translit, explanation: explain};
+                return { thai: thai, transliteration: translit, explanation: explain };
             }
 
             /*
@@ -239,7 +254,7 @@
                     else result += syllableTemplateChar;
                 }
 
-                if (final != null) result += final;
+                if (finalConsonant != null) result += finalConsonant;
 
                 return result;
             }
@@ -287,9 +302,12 @@
 
             /*
              */
-            function buildSyllableExplanation(category, vowelInfo, finalConsonant, toneMark)
+            function buildSyllableExplanation(anchorConsonant, category, vowelInfo, finalConsonant, toneMark)
             {
                 explanation = category + " consonant";
+
+                anchorInfo = THAI_CONSONANT_INFO[anchorConsonant];
+                explanation += " " + anchorConsonant + " " + anchorInfo.name;
 
                 explanation += " + ";
 
@@ -439,16 +457,12 @@
                 Determines whether a codepoint pushes a tone mark away from a consonant by one codepoint.
 
                 Normally, a tone mark immediately follows its consonant in memory. But a few codepoints that are
-                written above a consonant come between the consonant and any tone mark attached to it.
+                written above or below a consonant come between the consonant and any tone mark attached to it.
              */
             function delaysToneMark(c)
             {
-                c = c[0];
-
-                //     U+0E31 a      U+0E34 i      U+0E35 ii     U+0E36 ʉ      U+0E37 ʉʉ     U+0E38 u      U+0E39 uu
-                return (c === 'ั') || (c === 'ิ') || (c === 'ี') || (c === 'ึ') || (c === 'ื') || (c === 'ุ') || (c === 'ู');
-
-                // Also U+0E3A (phinthu), U+0E47 (mai thaiku), U+0E4D (nikhahit) -- but we don't use these.
+                //      a     i     ii    ʉ     ʉʉ    u     uu    พินทุ   ไม้ไต่คู้ การันต์ นิคหิต  ยามักการ
+                return "\u0E31\u0E34\u0E35\u0E36\u0E37\u0E38\u0E39\u0E3A\u0E47\u0E4C\u0E4D\u0E4E".includes(c[0]);
             }
 
             /*
@@ -470,26 +484,31 @@
         to see if the second tap will occur.
     -->
     <body style="touch-action: manipulation;">
+        <!--
+        <div id="lines" style="white-space: pre-wrap; font-family: 'Noto Sans Thai Looped'; font-size: 75px;">
+        </div>
+        -->
         <div style="display:flex; flex-direction: column;">
 
             <!-- flex row 1: next/advance button -->
             <div id="ux" style="margin-bottom: 20px;">
-                <button id="advanceButton" style="font-size: 20px;" onclick="advance()">Next/advance</button>
+                <div style="display: flex; justify-content: center;">
+                    <button id="advanceButton" style="font-size: 20px;" onclick="advance()">
+                        Next/advance
+                    </button>
+                </div>
             </div>
 
             <!-- flex row 2: Thai syllable -->
-            <div id="syllable" style="font-family: Ayuthaya; font-size: 50px; margin-bottom: 8px;">
-                This is the Thai syllable
+            <div id="syllable" style="font-family: 'Noto Sans Thai Looped'; font-size: 60px; margin-bottom: 8px;">
             </div>
 
             <!-- flex row 3: transliteration -->
             <div id="transliteration" style="font-size: 35px">
-                Transliteration
             </div>
 
             <!-- flex row 4: explanation -->
             <div id="explanation" style="font-size: 25px">
-                Explanation
             </div>
         </div>
 
@@ -513,15 +532,71 @@
                 {
                     // User is looking at an unrevealed syllable. Reveal it.
                     document.getElementById("transliteration").innerHTML = Syllable.transliteration;
-                    document.getElementById("explanation").innerText = explanation;
+                    document.getElementById("explanation").innerText = Syllable.explanation;
 
                     IsRevealed = true;
                 }
             }
 
             advanceButton = document.getElementById("advanceButton");
-            advanceButton.focus();
-            advance();
+            if (/Macintosh/.test(navigator.userAgent) && !/iPhone|iPad|iPod/.test(navigator.userAgent)) advanceButton.focus();
+            //advance();
+
+            /*
+                Generates all possible syllables based on
+                    - All possible initial consonants
+                    - All possible tone marks for each consonant
+                        - 5 possibilities for mid class
+                        - 3 possibilities for low, high class
+                        - No tone marks for certain vowels
+                    - Presence/absence of a final consonant (which is hard-coded, to only ก)
+                        - Some vowels require or prohibit a final consonant, and thus have one permutation
+                        - Some vowels allow but do not require a final consonant, and thus have two permutations
+             */
+            /*
+            function doLines()
+            {
+                const lines = document.getElementById("lines");
+                lines.textContent = "";
+
+                const tones = [ null, MAI_EEK, MAI_TOO, MAI_DTRII, MAI_JATDTAWAA ];
+
+                consonantCount = Object.entries(THAI_CONSONANT_INFO).length;
+                vowelCount = THAI_VOWEL_INFO.length;
+                totalCount = 0;
+
+                for (const [anchorConsonant, anchorConsonantInfo] of Object.entries(THAI_CONSONANT_INFO))
+                {
+                    for (const vowelInfo of THAI_VOWEL_INFO)
+                    {
+                        finalConsonant = (vowelInfo.finalConsonantRule == FINAL_CONSONANT_PROHIBITED) ? null : 'ก';
+
+                        toneCount = 3;
+                        if (MID_CONSONANTS.includes(anchorConsonant)) toneCount = 5;
+                        if (!vowelInfo.allowsTone) toneCount = 1;
+
+                        for (toneIndex = 0; toneIndex < toneCount; ++toneIndex)
+                        {
+                            tone = tones[toneIndex];
+
+                            thai = buildSyllableThai(anchorConsonant, vowelInfo, finalConsonant, tone);
+                            lines.textContent += totalCount + ": " + thai + "\n";
+                            ++totalCount;
+
+                            if (vowelInfo.finalConsonantRule == FINAL_CONSONANT_OPTIONAL)
+                            {
+                                thai = buildSyllableThai(anchorConsonant, vowelInfo, null, tone);
+                                lines.textContent += totalCount + ": " + thai + "\n";
+                                ++totalCount;
+                            }
+                        }
+                    }
+                }
+
+                console.log('Syllable count: ' + totalCount);
+            }
+            doLines();
+            */
         </script>
     </body>
 
