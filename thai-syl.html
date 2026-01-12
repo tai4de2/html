@@ -311,28 +311,29 @@
 
                 explanation += " + ";
 
-                finalInfo = null;
-                if (finalConsonant != null)
+                if (toneMark == null)
                 {
-                    finalInfo = THAI_CONSONANT_INFO[finalConsonant];
-                }
+                    finalInfo = null;
+                    if (finalConsonant != null)
+                    {
+                        finalInfo = THAI_CONSONANT_INFO[finalConsonant];
+                    }
 
-                syllableType = determineSyllableType(vowelInfo, finalInfo);
-                if (syllableType == SYLLABLE_LIVE) explanation += "live";
-                else if (syllableType == SYLLABLE_DEAD_LONG)
-                {
-                    explanation += (category === LOW_CONSONANT) ? "dead long" : "dead";
-                }
-                else if (syllableType == SYLLABLE_DEAD_SHORT)
-                {
-                    explanation += (category === LOW_CONSONANT) ? "dead short" : "dead";
-                }
+                    syllableType = determineSyllableType(vowelInfo, finalInfo);
+                    if (syllableType == SYLLABLE_LIVE) explanation += "live";
+                    else if (syllableType == SYLLABLE_DEAD_LONG)
+                    {
+                        explanation += (category === LOW_CONSONANT) ? "dead long" : "dead";
+                    }
+                    else if (syllableType == SYLLABLE_DEAD_SHORT)
+                    {
+                        explanation += (category === LOW_CONSONANT) ? "dead short" : "dead";
+                    }
 
-                explanation += " syllable";
-
-                if (toneMark != null)
+                    explanation += " syllable";
+                }
+                else
                 {
-                    explanation += " + ";
                     explanation += toneMark;
                 }
 
