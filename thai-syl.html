@@ -154,6 +154,8 @@
             const HIGH_CONSONANTS = "ขฃฉฐถผฝศษสห";
             const ALL_CONSONANTS = LOW_CONSONANTS + MID_CONSONANTS + HIGH_CONSONANTS;
 
+            const HAW_NAM_CONSONANTS = "งญนมยรลว";
+
             // We consider ว and ย to be part of vowels, and they're thus deliberately omitted here.
             const FINAL_CONSONANTS = "คฅฆชซฌฑฒทธพฟภงญณนมรลฬกจฎฏดตบปขฃฐถศษส";
 
@@ -203,11 +205,14 @@
                 // Tone mark.
                 tone = vowel.allowsTone ? validTones[randomIntExclusive(validTones.length)] : null;
 
+                // Haw nam: 40% chance if we have an eiligible low class consonant.
+                hawNam = (HAW_NAM_CONSONANTS.includes(anchor) && (randomIntExclusive(10) < 4));
+
                 // At this point, we have anchor, vowel, final, and tone.
                 // Build the Thai text representing the syllable, and the transliteration.
-                thai = buildSyllableThai(anchor, vowel, final, tone);
-                translit = buildSyllableTranslit(anchor, vowel, final, tone, category);
-                explain = buildSyllableExplanation(anchor, category, vowel, final, tone);
+                thai = buildSyllableThai(anchor, vowel, final, tone, hawNam);
+                translit = buildSyllableTranslit(anchor, vowel, final, tone, category, hawNam);
+                explain = buildSyllableExplanation(anchor, category, vowel, final, tone, hawNam);
 
                 // Done.
                 return { thai: thai, transliteration: translit, explanation: explain };
@@ -216,7 +221,7 @@
             /*
                 Returns a string.
              */
-            function buildSyllableThai(anchorConsonant, vowelInfo, finalConsonant, toneMark)
+            function buildSyllableThai(anchorConsonant, vowelInfo, finalConsonant, toneMark, hawNam)
             {
                 result = "";
 
@@ -231,6 +236,7 @@
 
                     if (!sawPlaceholder && (syllableTemplateChar === "อ"))
                     {
+                        if (hawNam) result += 'ห';
                         result += anchorConsonant;
                         sawPlaceholder = true;
 
@@ -262,7 +268,7 @@
             /*
                 Returns html, i.e. formatted with superscripts for the tones.
              */
-            function buildSyllableTranslit(anchorConsonant, vowelInfo, finalConsonant, toneMark, category)
+            function buildSyllableTranslit(anchorConsonant, vowelInfo, finalConsonant, toneMark, category, hawNam)
             {
                 result = "";
 
@@ -283,6 +289,7 @@
                 }
 
                 // Tone.
+                if (hawNam) category = HIGH_CONSONANT;
                 if (toneMark == null)
                 {
                     syllableType = determineSyllableType(vowelInfo, finalInfo);
@@ -302,12 +309,14 @@
 
             /*
              */
-            function buildSyllableExplanation(anchorConsonant, category, vowelInfo, finalConsonant, toneMark)
+            function buildSyllableExplanation(anchorConsonant, category, vowelInfo, finalConsonant, toneMark, hawNam)
             {
                 explanation = category + " consonant";
 
                 anchorInfo = THAI_CONSONANT_INFO[anchorConsonant];
                 explanation += " " + anchorConsonant + " " + anchorInfo.name;
+
+                if (hawNam) explanation += " + หอนำ";
 
                 explanation += " + ";
 
